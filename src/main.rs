@@ -7,6 +7,11 @@ use serenity::prelude::*;
 
 struct Handler;
 
+struct CommandMeta {
+    msg: Message,
+    context: Context,
+}
+
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, msg: Message) {
@@ -24,32 +29,59 @@ impl EventHandler for Handler {
                 Some(command) => command,
                 _ => "unknown command",
             };
-            match command {
-                "rozvrh" => {
-                    let think_msg = msg.channel_id.say(&ctx.http, "Přemejšlim... 🤔").await;
-                    let response = rozvrh::rozvrh_message(message_iterator);
 
-                    let edit_builder = match response.await {
-                        Ok(resp) => EditMessage::new()
-                            .content("Bazinga ☝🤓")
-                            .embed(resp.embed)
-                            .attachments(EditAttachments::new().add(resp.attachment)),
-                        Err(why) => EditMessage::new().content(format!("Něco se pokazilo: {}", why)),
-                    };
-
-                    if let Ok(mut think_msg_ok) = think_msg {
-                        if let Err(why) = think_msg_ok.edit(&ctx.http, edit_builder).await {
-                            println!("failed to edit message: {why:?}");
-                        }
-                    }
+            match invoke_command(
+                CommandMeta {
+                    msg: msg.clone(),
+                    context: ctx.clone(),
+                },
+                command,
+                message_iterator,
+            )
+            .await
+            {
+                Ok(_) => {}
+                Err(why) => {
+                    let _ = msg
+                        .channel_id
+                        .say(&ctx.http, format!("Failed to invoke command: {}", why))
+                        .await;
                 }
-
-                _ => {
-                    let _ = msg.channel_id.say(&ctx.http, "*說捷克語吧，孩子。*").await;
-                }
-            }
+            };
         }
     }
+}
+async fn invoke_command<'a, I>(meta: CommandMeta, command: &str, arguments: I) -> Result<(), String>
+where
+    I: Iterator<Item = &'a str>,
+{
+    match command {
+        "rozvrh" => {
+            let think_msg = meta
+                .msg
+                .channel_id
+                .say(&meta.context.http, "Přemejšlim... 🤔")
+                .await;
+            let response = rozvrh::rozvrh_message(arguments);
+
+            let edit_builder = match response.await {
+                Ok(resp) => EditMessage::new()
+                    .content("Bazinga ☝🤓")
+                    .embed(resp.embed)
+                    .attachments(EditAttachments::new().add(resp.attachment)),
+                Err(why) => EditMessage::new().content(format!("Něco se pokazilo: {}", why)),
+            };
+
+            if let Ok(mut think_msg_ok) = think_msg {
+                if let Err(why) = think_msg_ok.edit(&meta.context.http, edit_builder).await {
+                    println!("failed to edit message: {why:?}");
+                }
+            };
+        }
+        _ => return Err(format!("Command `{}` not recognized", command)),
+    };
+
+    Ok(())
 }
 
 use dotenv::dotenv;

@@ -10,9 +10,10 @@ pub struct CreateRozvrh {
     pub message: CreateMessage,
 }
 
-pub async fn rozvrh_message(
-    mut args: std::str::Split<'_, &'static str>,
-) -> Result<CreateRozvrh, Box<dyn std::error::Error>> {
+pub async fn rozvrh_message<'a, I>(mut args: I) -> Result<CreateRozvrh, Box<dyn std::error::Error>>
+where
+    I: Iterator<Item = &'a str>,
+{
     let class = args.next().unwrap_or("7B");
     let time = args.next().unwrap_or("0");
     let (arg, mode) = match class {
