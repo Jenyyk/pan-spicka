@@ -27,18 +27,15 @@ impl EventHandler for Handler {
             match command {
                 "rozvrh" => {
                     let think_msg = msg.channel_id.say(&ctx.http, "Přemejšlim... 🤔").await;
-                    let response = match rozvrh::rozvrh_message(message_iterator).await {
-                        Ok(resp) => resp,
-                        Err(why) => {
-                            println!("failed to create rozvrh: {why:?}");
-                            return;
-                        }
-                    };
+                    let response = rozvrh::rozvrh_message(message_iterator);
 
-                    let edit_builder = EditMessage::new()
-                        .content("Bazinga ☝🤓")
-                        .embed(response.embed)
-                        .attachments(EditAttachments::new().add(response.attachment));
+                    let edit_builder = match response.await {
+                        Ok(resp) => EditMessage::new()
+                            .content("Bazinga ☝🤓")
+                            .embed(resp.embed)
+                            .attachments(EditAttachments::new().add(resp.attachment)),
+                        Err(why) => EditMessage::new().content(format!("Něco se pokazilo: {}", why)),
+                    };
 
                     if let Ok(mut think_msg_ok) = think_msg {
                         if let Err(why) = think_msg_ok.edit(&ctx.http, edit_builder).await {

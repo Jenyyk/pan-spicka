@@ -1,11 +1,13 @@
 use std::process::Command;
 
-use serenity::builder::{CreateAttachment, CreateEmbed};
+use serenity::builder::{CreateAttachment, CreateEmbed, CreateMessage};
 use serenity::model::Color;
 
+#[allow(dead_code)]
 pub struct CreateRozvrh {
     pub attachment: CreateAttachment,
     pub embed: CreateEmbed,
+    pub message: CreateMessage,
 }
 
 pub async fn rozvrh_message(
@@ -93,7 +95,7 @@ pub async fn rozvrh_message(
         "V4" => ("5H", "Room"),
 
         // Default
-        _ => return Err("incorrect code".into()),
+        _ => return Err("Nechápu, kterej rozvrh chceš 🤔".into()),
     };
     let time = match time {
         "+1" => "Next",
@@ -121,6 +123,13 @@ pub async fn rozvrh_message(
         .title(format!("rozvrh pro {}", class))
         .attachment("rozvrh.png")
         .color(Color::from_rgb(5, 180, 255));
+    let message = CreateMessage::new()
+        .add_file(attachment.clone())
+        .embed(embed.clone());
 
-    Ok(CreateRozvrh { attachment, embed })
+    Ok(CreateRozvrh {
+        attachment,
+        embed,
+        message,
+    })
 }
