@@ -1,7 +1,11 @@
 mod rozvrh;
 
 use serenity::async_trait;
+use serenity::builder::{
+    CreateInteractionResponse, CreateInteractionResponseFollowup, CreateInteractionResponseMessage,
+};
 use serenity::builder::{EditAttachments, EditMessage};
+use serenity::model::application::Interaction;
 use serenity::model::channel::Message;
 use serenity::prelude::*;
 
@@ -14,6 +18,37 @@ struct CommandMeta {
 
 #[async_trait]
 impl EventHandler for Handler {
+    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        if let Interaction::Command(command) = interaction {
+            let _ = command
+                .create_response(
+                    &ctx.http,
+                    CreateInteractionResponse::Defer(
+                        CreateInteractionResponseMessage::new().content("Přemejšlim... 🤔"),
+                    ),
+                )
+                .await;
+            let message = match command.data.name.as_str() {
+                "rozvrh" => {
+                    let class = get_option_str(&command.data.options, "class").unwrap_or("7B");
+                    let time = get_option_str(&command.data.options, "time").unwrap_or("0");
+
+                    let resp = rozvrh::rozvrh_message(vec![class, time].into_iter())
+                        .await
+                        .unwrap();
+                    CreateInteractionResponseFollowup::new()
+                        .add_file(resp.attachment)
+                        .add_embed(resp.embed)
+                }
+                _ => CreateInteractionResponseFollowup::new().content("to neexistuje"),
+            };
+
+            if let Err(why) = command.create_followup(&ctx.http, message).await {
+                println!("Failed responding to slash command: {why:?}");
+            }
+        }
+    }
+
     async fn message(&self, ctx: Context, msg: Message) {
         if msg.content == "!ping" {
             let _ = msg.channel_id.say(&ctx.http, "Pong!").await;
@@ -42,6 +77,7 @@ impl EventHandler for Handler {
             {
                 Ok(_) => {}
                 Err(why) => {
+                    println!("Failed to invoke command: {why:?}");
                     let _ = msg
                         .channel_id
                         .say(&ctx.http, format!("Failed to invoke command: {}", why))
@@ -78,10 +114,33 @@ where
                 }
             };
         }
+
+        "register" => {
+            if let Some(guild_id) = meta.msg.guild_id {
+                let _ = meta
+                    .msg
+                    .channel_id
+                    .say(&meta.context.http, "Registruju / commandy 🤓")
+                    .await;
+                if let Err(why) = guild_id
+                    .set_commands(&meta.context.http, vec![rozvrh::register()])
+                    .await
+                {
+                    println!("failed to register: {why:?}");
+                }
+            }
+        }
+
         _ => return Err(format!("Command `{}` not recognized", command)),
     };
 
     Ok(())
+}
+
+// helper function to get slash command parameters
+use serenity::model::application::CommandDataOption;
+fn get_option_str<'a>(options: &'a [CommandDataOption], name: &str) -> Option<&'a str> {
+    options.iter().find(|opt| opt.name == name)?.value.as_str()
 }
 
 use dotenv::dotenv;

@@ -1,5 +1,6 @@
 use std::process::Command;
 
+use serenity::all::CommandOptionType;
 use serenity::builder::{CreateAttachment, CreateEmbed, CreateMessage};
 use serenity::model::Color;
 
@@ -133,4 +134,24 @@ where
         embed,
         message,
     })
+}
+
+// slash command pro rozvrh
+use serenity::builder::{CreateCommand, CreateCommandOption};
+pub fn register() -> CreateCommand {
+    CreateCommand::new("rozvrh")
+        .description("pošle rozvrh dané třídy")
+        .add_option(
+            CreateCommandOption::new(
+                CommandOptionType::String,
+                "class",
+                "třída ve formátu 1A, 7B atd...",
+            )
+            .required(true),
+        )
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::String,
+            "time",
+            "0 nebo +1",
+        ))
 }
