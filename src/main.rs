@@ -3,8 +3,10 @@ mod zmeny;
 
 use serenity::async_trait;
 use serenity::builder::{
-    CreateInteractionResponse, CreateInteractionResponseFollowup, CreateInteractionResponseMessage,
+    CreateCommand, CreateInteractionResponse, CreateInteractionResponseFollowup,
+    CreateInteractionResponseMessage,
 };
+use serenity::builder::{CreateEmbed, CreateMessage};
 use serenity::builder::{EditAttachments, EditMessage};
 use serenity::model::application::Interaction;
 use serenity::model::channel::Message;
@@ -19,6 +21,7 @@ struct CommandMeta {
 
 #[async_trait]
 impl EventHandler for Handler {
+    // Slash command handler
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::Command(command) = interaction {
             let _ = command
@@ -49,6 +52,15 @@ impl EventHandler for Handler {
                         .add_file(resp.attachment)
                         .add_embed(resp.embed)
                 }
+                "help" => {
+                    let help_content: CreateEmbed = CreateEmbed::new()
+                            .field("Prefixy", "Pan Středa přijímá tyto prefixy před zprávami jako příkazy:\n`!ps`, `kys`, `186`", false)
+                            .field("Lomítkové Příkazy", "Pan Středa také přijímá discordem podporované příkazy začínající s `/`", false)
+                            .field("Pan Středa podporuje tyto příkazy:", "", false)
+                            .field("`rozvrh` `~třída` `~čas`", "třída musí být ve formátu 7B, tj. bez tečky a s velkým písmenem\nčas je buď `0` nebo `+1`, není povinné ho zadávat", false)
+                            .field("`zmeny` `~třída`", "třída musí být ve formátu 7B, tj. bez tečky a s velkým písmenem", false);
+                    CreateInteractionResponseFollowup::new().add_embed(help_content)
+                }
                 _ => CreateInteractionResponseFollowup::new().content("to neexistuje"),
             };
 
@@ -58,6 +70,7 @@ impl EventHandler for Handler {
         }
     }
 
+    // Message handler
     async fn message(&self, ctx: Context, msg: Message) {
         if msg.content == "!ping" {
             let _ = msg.channel_id.say(&ctx.http, "Pong!").await;
@@ -66,7 +79,7 @@ impl EventHandler for Handler {
 
         let mut message_iterator = msg.content.split(" ");
         if let Some(first_word) = message_iterator.next() {
-            if first_word != "kys" && first_word != "186" {
+            if first_word != "kys" && first_word != "!ps" && first_word != "186" {
                 return;
             }
             let command = match message_iterator.next() {
@@ -96,6 +109,8 @@ impl EventHandler for Handler {
         }
     }
 }
+
+// Invoke message commands
 async fn invoke_command<'a, I>(meta: CommandMeta, command: &str, arguments: I) -> Result<(), String>
 where
     I: Iterator<Item = &'a str>,
@@ -157,12 +172,34 @@ where
                 if let Err(why) = guild_id
                     .set_commands(
                         &meta.context.http,
-                        vec![rozvrh::register(), zmeny::register()],
+                        vec![
+                            rozvrh::register(),
+                            zmeny::register(),
+                            CreateCommand::new("help").description("zašle pomocné menu"),
+                        ],
                     )
                     .await
                 {
                     println!("failed to register: {why:?}");
                 }
+            }
+        }
+
+        "help" => {
+            let help_content: CreateEmbed = CreateEmbed::new()
+                    .field("Prefixy", "Pan Středa přijímá tyto prefixy před zprávami jako příkazy:\n`!ps`, `kys`, `186`", false)
+                    .field("Lomítkové Příkazy", "Pan Středa také přijímá discordem podporované příkazy začínající s `/`", false)
+                    .field("Pan Středa podporuje tyto příkazy:", "", false)
+                    .field("`rozvrh` `~třída` `~čas`", "třída musí být ve formátu 7B, tj. bez tečky a s velkým písmenem\nčas je buď `0` nebo `+1`, není povinné ho zadávat", false)
+                    .field("`zmeny` `~třída`", "třída musí být ve formátu 7B, tj. bez tečky a s velkým písmenem", false);
+
+            if let Err(why) = meta
+                .msg
+                .channel_id
+                .send_message(&meta.context.http, CreateMessage::new().embed(help_content))
+                .await
+            {
+                println!("Failed sending help: {why:?}");
             }
         }
 
