@@ -1,4 +1,5 @@
 mod rozvrh;
+mod zmeny;
 
 use serenity::async_trait;
 use serenity::builder::{
@@ -36,6 +37,14 @@ impl EventHandler for Handler {
                     let resp = rozvrh::rozvrh_message(vec![class, time].into_iter())
                         .await
                         .unwrap();
+                    CreateInteractionResponseFollowup::new()
+                        .add_file(resp.attachment)
+                        .add_embed(resp.embed)
+                }
+                "zmeny" => {
+                    let class = get_option_str(&command.data.options, "class").unwrap_or("7B");
+
+                    let resp = zmeny::zmeny_message(vec![class].into_iter()).await.unwrap();
                     CreateInteractionResponseFollowup::new()
                         .add_file(resp.attachment)
                         .add_embed(resp.embed)
@@ -115,6 +124,29 @@ where
             };
         }
 
+        "zmeny" => {
+            let think_msg = meta
+                .msg
+                .channel_id
+                .say(&meta.context.http, "Přemejšlim... 🤔")
+                .await;
+            let response = zmeny::zmeny_message(arguments);
+
+            let edit_builder = match response.await {
+                Ok(resp) => EditMessage::new()
+                    .content("Bazinga ☝🤓")
+                    .embed(resp.embed)
+                    .attachments(EditAttachments::new().add(resp.attachment)),
+                Err(why) => EditMessage::new().content(format!("Něco se pokazilo: {}", why)),
+            };
+
+            if let Ok(mut think_msg_ok) = think_msg {
+                if let Err(why) = think_msg_ok.edit(&meta.context.http, edit_builder).await {
+                    println!("failed to edit message: {why:?}");
+                }
+            };
+        }
+
         "register" => {
             if let Some(guild_id) = meta.msg.guild_id {
                 let _ = meta
@@ -123,7 +155,10 @@ where
                     .say(&meta.context.http, "Registruju / commandy 🤓")
                     .await;
                 if let Err(why) = guild_id
-                    .set_commands(&meta.context.http, vec![rozvrh::register()])
+                    .set_commands(
+                        &meta.context.http,
+                        vec![rozvrh::register(), zmeny::register()],
+                    )
                     .await
                 {
                     println!("failed to register: {why:?}");
