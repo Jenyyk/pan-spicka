@@ -2,6 +2,7 @@ mod rozvrh;
 mod zmeny;
 
 use serenity::async_trait;
+use serenity::model::prelude::Ready;
 use serenity::builder::{
     CreateCommand, CreateInteractionResponse, CreateInteractionResponseFollowup,
     CreateInteractionResponseMessage,
@@ -21,6 +22,19 @@ struct CommandMeta {
 
 #[async_trait]
 impl EventHandler for Handler {
+    // Bot start
+    async fn ready(&self, ctx: Context, _ready: Ready) {
+        let global_commands = vec![
+            rozvrh::register(),
+            zmeny::register(),
+            CreateCommand::new("help").description("zašle pomocné menu"),
+        ];
+
+        match serenity::model::application::Command::set_global_commands(&ctx.http, global_commands).await {
+            Ok(_) => println!("Succesfully registered global commands"),
+            Err(why) => println!("Error registering global commands: {why:?}")
+        };
+    }
     // Slash command handler
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::Command(command) = interaction {
@@ -181,6 +195,24 @@ where
                     .await
                 {
                     println!("failed to register: {why:?}");
+                }
+            }
+        }
+        "unregister" => {
+            if let Some(guild_id) = meta.msg.guild_id {
+                let _ = meta
+                    .msg
+                    .channel_id
+                    .say(&meta.context.http, "Odebírám / commandy 🤓")
+                    .await;
+                if let Err(why) = guild_id
+                    .set_commands(
+                        &meta.context.http,
+                        vec![],
+                    )
+                    .await
+                {
+                    println!("failed to unregister: {why:?}");
                 }
             }
         }
