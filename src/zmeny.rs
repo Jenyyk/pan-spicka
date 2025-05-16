@@ -1,6 +1,5 @@
 use std::process::Command;
 
-use serenity::all::CommandOptionType;
 use serenity::builder::{CreateAttachment, CreateEmbed, CreateMessage};
 use serenity::model::Color;
 
@@ -50,6 +49,7 @@ where
 
 // slash command pro rozvrh
 use serenity::builder::{CreateCommand, CreateCommandOption};
+use serenity::model::application::CommandOptionType;
 
 pub fn register() -> CreateCommand {
     CreateCommand::new("zmeny")

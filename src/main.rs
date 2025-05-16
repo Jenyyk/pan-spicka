@@ -1,8 +1,8 @@
+mod chatbot;
 mod rozvrh;
 mod zmeny;
 
 use serenity::async_trait;
-use serenity::model::prelude::Ready;
 use serenity::builder::{
     CreateCommand, CreateInteractionResponse, CreateInteractionResponseFollowup,
     CreateInteractionResponseMessage,
@@ -11,6 +11,7 @@ use serenity::builder::{CreateEmbed, CreateMessage};
 use serenity::builder::{EditAttachments, EditMessage};
 use serenity::model::application::Interaction;
 use serenity::model::channel::Message;
+use serenity::model::prelude::Ready;
 use serenity::prelude::*;
 
 struct Handler;
@@ -27,12 +28,15 @@ impl EventHandler for Handler {
         let global_commands = vec![
             rozvrh::register(),
             zmeny::register(),
+            chatbot::register(),
             CreateCommand::new("help").description("zašle pomocné menu"),
         ];
 
-        match serenity::model::application::Command::set_global_commands(&ctx.http, global_commands).await {
+        match serenity::model::application::Command::set_global_commands(&ctx.http, global_commands)
+            .await
+        {
             Ok(_) => println!("Succesfully registered global commands"),
-            Err(why) => println!("Error registering global commands: {why:?}")
+            Err(why) => println!("Error registering global commands: {why:?}"),
         };
     }
     // Slash command handler
@@ -65,6 +69,12 @@ impl EventHandler for Handler {
                     CreateInteractionResponseFollowup::new()
                         .add_file(resp.attachment)
                         .add_embed(resp.embed)
+                }
+                "ai" => {
+                    let arg = get_option_str(&command.data.options, "message").unwrap_or("");
+
+                    let resp = chatbot::chat(arg).await.unwrap();
+                    CreateInteractionResponseFollowup::new().content(resp)
                 }
                 "help" => {
                     let help_content: CreateEmbed = CreateEmbed::new()
@@ -189,6 +199,7 @@ where
                         vec![
                             rozvrh::register(),
                             zmeny::register(),
+                            chatbot::register(),
                             CreateCommand::new("help").description("zašle pomocné menu"),
                         ],
                     )
@@ -205,13 +216,7 @@ where
                     .channel_id
                     .say(&meta.context.http, "Odebírám / commandy 🤓")
                     .await;
-                if let Err(why) = guild_id
-                    .set_commands(
-                        &meta.context.http,
-                        vec![],
-                    )
-                    .await
-                {
+                if let Err(why) = guild_id.set_commands(&meta.context.http, vec![]).await {
                     println!("failed to unregister: {why:?}");
                 }
             }
@@ -233,6 +238,28 @@ where
             {
                 println!("Failed sending help: {why:?}");
             }
+        }
+
+        "ai" => {
+            let think_msg = meta
+                .msg
+                .channel_id
+                .say(&meta.context.http, "Přemejšlim... 🤔")
+                .await;
+
+            let ai_response = match chatbot::chat(&arguments.collect::<Vec<&str>>().join(" ")).await
+            {
+                Ok(resp) => resp,
+                Err(why) => format!("Failed talking with AI: {}", why),
+            };
+
+            let edit_builder = EditMessage::new().content(ai_response);
+
+            if let Ok(mut think_msg_ok) = think_msg {
+                if let Err(why) = think_msg_ok.edit(&meta.context.http, edit_builder).await {
+                    println!("failed to edit message: {why:?}");
+                }
+            };
         }
 
         _ => return Err(format!("Command `{}` not recognized", command)),
