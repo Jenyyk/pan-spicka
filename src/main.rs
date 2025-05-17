@@ -94,6 +94,14 @@ impl EventHandler for Handler {
         }
 
         let mut message_iterator = msg.content.split(" ");
+
+        let self_id = ctx.cache.current_user().id;
+        // checks if bot was mentioned
+        if msg.mentions.iter().any(|user| user.id == self_id) {
+            let _ = invoke_command(CommandMeta {msg: msg.clone(), context: ctx.clone()}, "ai", message_iterator).await;
+            return;
+        }
+
         if let Some(first_word) = message_iterator.next() {
             if first_word != "kys" && first_word != "!ps" && first_word != "186" {
                 return;
