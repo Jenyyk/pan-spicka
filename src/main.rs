@@ -14,13 +14,13 @@ use serenity::model::channel::Message;
 use serenity::model::prelude::Ready;
 use serenity::prelude::*;
 
-struct Handler;
-
 struct CommandMeta {
     msg: Message,
     context: Context,
 }
 
+// Event Handler implementations
+struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     // Bot start
@@ -39,6 +39,7 @@ impl EventHandler for Handler {
             Err(why) => println!("Error registering global commands: {why:?}"),
         };
     }
+
     // Slash command handler
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::Command(command) = interaction {
@@ -97,40 +98,54 @@ impl EventHandler for Handler {
 
         let self_id = ctx.cache.current_user().id;
         // checks if bot was mentioned
+        // This is so we can use the ai command to respond to the bot being mentioned
         if msg.mentions.iter().any(|user| user.id == self_id) {
-            let _ = invoke_command(CommandMeta {msg: msg.clone(), context: ctx.clone()}, "ai", message_iterator).await;
-            return;
-        }
-
-        if let Some(first_word) = message_iterator.next() {
-            if first_word != "kys" && first_word != "!ps" && first_word != "186" {
-                return;
-            }
-            let command = match message_iterator.next() {
-                Some(command) => command,
-                _ => "unknown command",
-            };
-
-            match invoke_command(
+            let _ = invoke_command(
                 CommandMeta {
                     msg: msg.clone(),
                     context: ctx.clone(),
                 },
-                command,
+                "ai",
                 message_iterator,
             )
-            .await
-            {
-                Ok(_) => {}
-                Err(why) => {
-                    println!("Failed to invoke command: {why:?}");
-                    let _ = msg
-                        .channel_id
-                        .say(&ctx.http, format!("Failed to invoke command: {}", why))
-                        .await;
-                }
-            };
+            .await;
+            return;
         }
+
+        // Return if message isnt a prefix command
+        if let Some(first_word) = message_iterator.next() {
+            if first_word != "kys" && first_word != "!ps" && first_word != "186" {
+                return;
+            }
+        } else {
+            return;
+        }
+
+        let command = match message_iterator.next() {
+            Some(command) => command,
+            _ => "unknown command",
+        };
+
+        // Run the command
+        match invoke_command(
+            CommandMeta {
+                msg: msg.clone(),
+                context: ctx.clone(),
+            },
+            command,
+            message_iterator,
+        )
+        .await
+        {
+            Ok(_) => {}
+            Err(why) => {
+                println!("Failed to invoke command: {why:?}");
+                let _ = msg
+                    .channel_id
+                    .say(&ctx.http, format!("Failed to invoke command: {}", why))
+                    .await;
+            }
+        };
     }
 }
 
