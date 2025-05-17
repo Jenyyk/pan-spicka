@@ -289,15 +289,15 @@ fn help_content() -> CreateEmbed {
     CreateEmbed::new()
         .field(
             "Prefixy",
-            "Pan Středa přijímá tyto prefixy před zprávami jako příkazy:\n`!ps`, `kys`, `186`",
+            "Pan Špička přijímá tyto prefixy před zprávami jako příkazy:\n`!ps`, `kys`, `186`",
             false,
         )
         .field(
             "Lomítkové Příkazy",
-            "Pan Středa také přijímá discordem podporované příkazy začínající s `/`",
+            "Pan Špička také přijímá discordem podporované příkazy začínající s `/`",
             false,
         )
-        .field("Pan Středa podporuje tyto příkazy:", "", false)
+        .field("Pan Špička podporuje tyto příkazy:", "", false)
         .help_field(rozvrh::help_message())
         .help_field(chatbot::help_message())
         .help_field(zmeny::help_message())

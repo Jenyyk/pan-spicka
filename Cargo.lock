@@ -1114,7 +1114,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pan-streda"
+name = "pan-spicka"
 version = "0.1.0"
 dependencies = [
  "dotenv",
