@@ -63,3 +63,10 @@ pub fn register() -> CreateCommand {
             .required(true),
         )
 }
+
+pub fn help_message() -> (&'static str, &'static str) {
+    (
+        "`zmeny ~třída`",
+        "Pošle změny dané třídy.\n`~třída` musí mít velké písmeno a být bez tečky, eg. **7B**, **2A**...",
+    )
+}

@@ -76,15 +76,7 @@ impl EventHandler for Handler {
                     let resp = chatbot::chat(arg).await.unwrap();
                     CreateInteractionResponseFollowup::new().content(resp)
                 }
-                "help" => {
-                    let help_content: CreateEmbed = CreateEmbed::new()
-                            .field("Prefixy", "Pan Středa přijímá tyto prefixy před zprávami jako příkazy:\n`!ps`, `kys`, `186`", false)
-                            .field("Lomítkové Příkazy", "Pan Středa také přijímá discordem podporované příkazy začínající s `/`", false)
-                            .field("Pan Středa podporuje tyto příkazy:", "", false)
-                            .field("`rozvrh` `~třída` `~čas`", "třída musí být ve formátu 7B, tj. bez tečky a s velkým písmenem\nčas je buď `0` nebo `+1`, není povinné ho zadávat", false)
-                            .field("`zmeny` `~třída`", "třída musí být ve formátu 7B, tj. bez tečky a s velkým písmenem", false);
-                    CreateInteractionResponseFollowup::new().add_embed(help_content)
-                }
+                "help" => CreateInteractionResponseFollowup::new().add_embed(help_content()),
                 _ => CreateInteractionResponseFollowup::new().content("to neexistuje"),
             };
 
@@ -223,17 +215,13 @@ where
         }
 
         "help" => {
-            let help_content: CreateEmbed = CreateEmbed::new()
-                    .field("Prefixy", "Pan Středa přijímá tyto prefixy před zprávami jako příkazy:\n`!ps`, `kys`, `186`", false)
-                    .field("Lomítkové Příkazy", "Pan Středa také přijímá discordem podporované příkazy začínající s `/`", false)
-                    .field("Pan Středa podporuje tyto příkazy:", "", false)
-                    .field("`rozvrh` `~třída` `~čas`", "třída musí být ve formátu 7B, tj. bez tečky a s velkým písmenem\nčas je buď `0` nebo `+1`, není povinné ho zadávat", false)
-                    .field("`zmeny` `~třída`", "třída musí být ve formátu 7B, tj. bez tečky a s velkým písmenem", false);
-
             if let Err(why) = meta
                 .msg
                 .channel_id
-                .send_message(&meta.context.http, CreateMessage::new().embed(help_content))
+                .send_message(
+                    &meta.context.http,
+                    CreateMessage::new().embed(help_content()),
+                )
                 .await
             {
                 println!("Failed sending help: {why:?}");
@@ -272,6 +260,33 @@ where
 use serenity::model::application::CommandDataOption;
 fn get_option_str<'a>(options: &'a [CommandDataOption], name: &str) -> Option<&'a str> {
     options.iter().find(|opt| opt.name == name)?.value.as_str()
+}
+
+fn help_content() -> CreateEmbed {
+    CreateEmbed::new()
+        .field(
+            "Prefixy",
+            "Pan Středa přijímá tyto prefixy před zprávami jako příkazy:\n`!ps`, `kys`, `186`",
+            false,
+        )
+        .field(
+            "Lomítkové Příkazy",
+            "Pan Středa také přijímá discordem podporované příkazy začínající s `/`",
+            false,
+        )
+        .field("Pan Středa podporuje tyto příkazy:", "", false)
+        .help_field(rozvrh::help_message())
+        .help_field(chatbot::help_message())
+        .help_field(zmeny::help_message())
+}
+// YES this is ABSOLUTELY NEEDED
+pub trait HelpField {
+    fn help_field(self, args: (&str, &str)) -> Self;
+}
+impl HelpField for CreateEmbed {
+    fn help_field(self, args: (&str, &str)) -> Self {
+        self.field(args.0, args.1, false)
+    }
 }
 
 use dotenv::dotenv;

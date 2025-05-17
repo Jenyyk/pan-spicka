@@ -155,3 +155,10 @@ pub fn register() -> CreateCommand {
             "0 nebo +1",
         ))
 }
+
+pub fn help_message() -> (&'static str, &'static str) {
+    (
+        "`rozvrh ~třída ~čas`",
+        "Pošle rozvrh dané třídy.\n`~třída` musí mít velké písmeno a být bez tečky, eg. **7B**, **2A**...\n`~čas` musí být buď **0** nebo **+1**",
+    )
+}
