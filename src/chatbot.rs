@@ -73,6 +73,6 @@ pub fn register() -> CreateCommand {
 pub fn help_message() -> (&'static str, &'static str) {
     (
         "`ai ~zpráva`",
-        "Konverzuj s panem Středou (AI slopem).\n Vše po slovu 'ai' je považováno za zprávu.",
+        "Konverzuj s panem Špičkou (AI slopem).\n Vše po slovu 'ai' je považováno za zprávu.",
     )
 }
