@@ -2,17 +2,16 @@ mod chatbot;
 mod rozvrh;
 mod zmeny;
 
-use serenity::async_trait;
-use serenity::builder::{
-    CreateCommand, CreateInteractionResponse, CreateInteractionResponseFollowup,
-    CreateInteractionResponseMessage,
+use serenity::{
+    async_trait,
+    builder::{
+        CreateCommand, CreateEmbed, CreateInteractionResponse, CreateInteractionResponseFollowup,
+        CreateInteractionResponseMessage, CreateMessage, EditAttachments, EditMessage,
+    },
+    gateway::ActivityData,
+    model::{application::Interaction, channel::Message, prelude::Ready},
+    prelude::*,
 };
-use serenity::builder::{CreateEmbed, CreateMessage};
-use serenity::builder::{EditAttachments, EditMessage};
-use serenity::model::application::Interaction;
-use serenity::model::channel::Message;
-use serenity::model::prelude::Ready;
-use serenity::prelude::*;
 
 struct CommandMeta {
     msg: Message,
@@ -25,19 +24,22 @@ struct Handler;
 impl EventHandler for Handler {
     // Bot start
     async fn ready(&self, ctx: Context, _ready: Ready) {
+        // register global commands
         let global_commands = vec![
             rozvrh::register(),
             zmeny::register(),
             chatbot::register(),
             CreateCommand::new("help").description("zašle pomocné menu"),
         ];
-
         match serenity::model::application::Command::set_global_commands(&ctx.http, global_commands)
             .await
         {
             Ok(_) => println!("Succesfully registered global commands"),
             Err(why) => println!("Error registering global commands: {why:?}"),
         };
+
+        // set custom activity
+        ctx.set_activity(Some(ActivityData::custom("Kontroluju boty")));
     }
 
     // Slash command handler
@@ -150,7 +152,7 @@ impl EventHandler for Handler {
 }
 
 // Invoke message commands
-async fn invoke_command<'a, I>(meta: CommandMeta, command: &str, arguments: I) -> Result<(), String>
+async fn invoke_command<'a, I>(meta: CommandMeta, command: &str, mut arguments: I) -> Result<(), String>
 where
     I: Iterator<Item = &'a str>,
 {
@@ -271,6 +273,21 @@ where
                     println!("failed to edit message: {why:?}");
                 }
             };
+        }
+
+        "status" => {
+            if meta.msg.author.id.to_string() != "416295343198568458" {
+                println!("Dev command executed by not admin");
+                return Ok(());
+            }
+            match arguments.next() {
+                Some("competing") => meta.context.set_activity(Some(ActivityData::competing(arguments.collect::<Vec<&str>>().join(" ")))),
+                Some("custom") => meta.context.set_activity(Some(ActivityData::custom(arguments.collect::<Vec<&str>>().join(" ")))),
+                Some("listening") => meta.context.set_activity(Some(ActivityData::listening(arguments.collect::<Vec<&str>>().join(" ")))),
+                Some("playing") => meta.context.set_activity(Some(ActivityData::playing(arguments.collect::<Vec<&str>>().join(" ")))),
+                Some("watching") => meta.context.set_activity(Some(ActivityData::watching(arguments.collect::<Vec<&str>>().join(" ")))),
+                _ => meta.context.set_activity(None),
+            }
         }
 
         _ => return Err(format!("Command `{}` not recognized", command)),
