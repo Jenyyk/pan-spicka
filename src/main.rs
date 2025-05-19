@@ -1,4 +1,5 @@
 mod chatbot;
+mod lunch_fetch;
 mod rozvrh;
 mod zmeny;
 
@@ -29,6 +30,7 @@ impl EventHandler for Handler {
             rozvrh::register(),
             zmeny::register(),
             chatbot::register(),
+            lunch_fetch::register(),
             CreateCommand::new("help").description("zašle pomocné menu"),
         ];
         match serenity::model::application::Command::set_global_commands(&ctx.http, global_commands)
@@ -80,6 +82,17 @@ impl EventHandler for Handler {
                     CreateInteractionResponseFollowup::new().content(resp)
                 }
                 "help" => CreateInteractionResponseFollowup::new().add_embed(help_content()),
+                "obedy" => {
+                    let days_forward = get_option_str(&command.data.options, "days_forward")
+                        .unwrap_or("0")
+                        .parse::<i64>()
+                        .unwrap_or(0);
+                    match lunch_fetch::get_lunch_embed(days_forward) {
+                        Ok(vec) => CreateInteractionResponseFollowup::new().embeds(vec),
+                        Err(why) => CreateInteractionResponseFollowup::new()
+                            .content(format!("Command failed: {}", why)),
+                    }
+                }
                 _ => CreateInteractionResponseFollowup::new().content("to neexistuje"),
             };
 
@@ -152,7 +165,11 @@ impl EventHandler for Handler {
 }
 
 // Invoke message commands
-async fn invoke_command<'a, I>(meta: CommandMeta, command: &str, mut arguments: I) -> Result<(), String>
+async fn invoke_command<'a, I>(
+    meta: CommandMeta,
+    command: &str,
+    mut arguments: I,
+) -> Result<(), String>
 where
     I: Iterator<Item = &'a str>,
 {
@@ -217,6 +234,7 @@ where
                             rozvrh::register(),
                             zmeny::register(),
                             chatbot::register(),
+                            lunch_fetch::register(),
                             CreateCommand::new("help").description("zašle pomocné menu"),
                         ],
                     )
@@ -281,13 +299,38 @@ where
                 return Ok(());
             }
             match arguments.next() {
-                Some("competing") => meta.context.set_activity(Some(ActivityData::competing(arguments.collect::<Vec<&str>>().join(" ")))),
-                Some("custom") => meta.context.set_activity(Some(ActivityData::custom(arguments.collect::<Vec<&str>>().join(" ")))),
-                Some("listening") => meta.context.set_activity(Some(ActivityData::listening(arguments.collect::<Vec<&str>>().join(" ")))),
-                Some("playing") => meta.context.set_activity(Some(ActivityData::playing(arguments.collect::<Vec<&str>>().join(" ")))),
-                Some("watching") => meta.context.set_activity(Some(ActivityData::watching(arguments.collect::<Vec<&str>>().join(" ")))),
+                Some("competing") => meta.context.set_activity(Some(ActivityData::competing(
+                    arguments.collect::<Vec<&str>>().join(" "),
+                ))),
+                Some("custom") => meta.context.set_activity(Some(ActivityData::custom(
+                    arguments.collect::<Vec<&str>>().join(" "),
+                ))),
+                Some("listening") => meta.context.set_activity(Some(ActivityData::listening(
+                    arguments.collect::<Vec<&str>>().join(" "),
+                ))),
+                Some("playing") => meta.context.set_activity(Some(ActivityData::playing(
+                    arguments.collect::<Vec<&str>>().join(" "),
+                ))),
+                Some("watching") => meta.context.set_activity(Some(ActivityData::watching(
+                    arguments.collect::<Vec<&str>>().join(" "),
+                ))),
                 _ => meta.context.set_activity(None),
             }
+        }
+
+        "obedy" => {
+            let days_forward = arguments.next().unwrap_or("0").parse::<i64>().unwrap_or(0);
+
+            let embed_vec = match lunch_fetch::get_lunch_embed(days_forward) {
+                Ok(vec) => vec,
+                Err(e) => return Err(e.to_string()),
+            };
+
+            let _ = meta
+                .msg
+                .channel_id
+                .send_message(&meta.context, CreateMessage::new().embeds(embed_vec))
+                .await;
         }
 
         _ => return Err(format!("Command `{}` not recognized", command)),
@@ -317,6 +360,7 @@ fn help_content() -> CreateEmbed {
         .field("Pan Špička podporuje tyto příkazy:", "", false)
         .help_field(rozvrh::help_message())
         .help_field(chatbot::help_message())
+        .help_field(lunch_fetch::help())
         .help_field(zmeny::help_message())
 }
 // YES this is ABSOLUTELY NEEDED
