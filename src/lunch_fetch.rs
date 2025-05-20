@@ -148,7 +148,7 @@ pub fn register() -> CreateCommand {
             "Kolik dní dopředu oběd? 0 - dnes, 1 - zítra atd.",
         ))
 }
-pub fn help() -> (&'static str, &'static str) {
+pub fn help_message() -> (&'static str, &'static str) {
     (
         "`obedy ~dny_dopředu`",
         "Zašle obědy v gypce jídelně v daný den\n`~dny_dopředu` musí být kladné číslo, 0 - dnes, 1 - zítra atd.",

@@ -263,7 +263,13 @@ where
                 .channel_id
                 .send_message(
                     &meta.context.http,
-                    CreateMessage::new().embed(help_content()),
+                    CreateMessage::new().embed(match arguments.next() {
+                        Some("rozvrh") => CreateEmbed::new().help_field(rozvrh::help_message()),
+                        Some("ai") => CreateEmbed::new().help_field(chatbot::help_message()),
+                        Some("obedy") => CreateEmbed::new().help_field(lunch_fetch::help_message()),
+                        Some("zmeny") => CreateEmbed::new().help_field(zmeny::help_message()),
+                        _ => help_content(),
+                    }),
                 )
                 .await
             {
@@ -360,7 +366,7 @@ fn help_content() -> CreateEmbed {
         .field("Pan Špička podporuje tyto příkazy:", "", false)
         .help_field(rozvrh::help_message())
         .help_field(chatbot::help_message())
-        .help_field(lunch_fetch::help())
+        .help_field(lunch_fetch::help_message())
         .help_field(zmeny::help_message())
 }
 // YES this is ABSOLUTELY NEEDED
