@@ -127,7 +127,7 @@ pub fn get_lunch_embed(days_forward: i64) -> Result<Vec<CreateEmbed>, String> {
                         "https://www.gypce.cz/wp-content/uploads/2013/06/gypce-1.jpg",
                     ),
             )
-            .description(format!("{}", offer["name"]))
+            .description(format!("# {}", offer["name"].to_string().replace('"', "")))
             .thumbnail(trimmed_image_url.unwrap_or(String::from("")))
             .color(Color::from_rgb(255, 20, 140))
             .footer(CreateEmbedFooter::new(rating).icon_url("https://png.pngtree.com/png-vector/20230222/ourmid/pngtree-shiny-yellow-star-icon-clipart-png-image_6613580.png"));
