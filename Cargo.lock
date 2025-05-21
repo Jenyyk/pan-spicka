@@ -1131,6 +1131,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "dotenv",
+ "once_cell",
  "openssl",
  "reqwest 0.12.15",
  "serde",

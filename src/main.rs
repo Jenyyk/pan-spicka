@@ -1,4 +1,5 @@
 mod chatbot;
+mod database;
 mod lunch_fetch;
 mod rozvrh;
 mod zmeny;
@@ -13,6 +14,8 @@ use serenity::{
     model::{application::Interaction, channel::Message, prelude::Ready},
     prelude::*,
 };
+
+use database::Database;
 
 struct CommandMeta {
     msg: Message,
@@ -302,7 +305,9 @@ where
         "status" => {
             if meta.msg.author.id.to_string() != "416295343198568458" {
                 println!("Dev command executed by not admin");
-                return Ok(());
+                return Err(String::from(
+                    "Insufficient permissions: Only admins can use this command.",
+                ));
             }
             match arguments.next() {
                 Some("competing") => meta.context.set_activity(Some(ActivityData::competing(
@@ -337,6 +342,85 @@ where
                 .channel_id
                 .send_message(&meta.context, CreateMessage::new().embeds(embed_vec))
                 .await;
+        }
+
+        "announcements" => {
+            // first check permissions
+            let guild_id = match meta.msg.guild_id {
+                Some(gid) => gid,
+                None => return Err(String::from("Failed getting guild id")),
+            };
+            let channel = match meta.msg.channel_id.to_channel(&meta.context.http).await {
+                Ok(ch) => match ch.guild() {
+                    Some(gch) => gch,
+                    None => return Err(String::from("Failed getting guild channel")),
+                },
+                Err(why) => return Err(format!("Failed getting channel: {}", why)),
+            };
+            let member = match guild_id
+                .member(&meta.context.http, meta.msg.author.id)
+                .await
+            {
+                Ok(member) => member,
+                Err(why) => return Err(format!("Failed getting member object: {}", why)),
+            };
+            match guild_id.to_guild_cached(&meta.context.cache) {
+                Some(guild) => {
+                    if !guild
+                        .user_permissions_in(&channel, &member)
+                        .manage_channels()
+                    {
+                        return Err(String::from("Insufficient permissions"));
+                    }
+                }
+                None => {
+                    return Err(String::from("Failed checking permissions"));
+                }
+            }
+
+            if let Err(why) = Database::set_announcement_channel(
+                guild_id.to_string(),
+                meta.msg.channel_id.to_string(),
+            ) {
+                return Err(why.to_string());
+            }
+            let _ = meta
+                .msg
+                .channel_id
+                .say(&meta.context.http, "Kanál nastaven!")
+                .await;
+        }
+
+        "announce" => {
+            // first check permissions
+            if meta.msg.author.id.to_string() != "416295343198568458" {
+                println!("Dev command executed by not admin");
+                return Err(String::from(
+                    "Insufficient permissions: Only admins can use this command.",
+                ));
+            }
+
+            let message_content = arguments.collect::<Vec<&str>>().join(" ");
+            let data = match Database::get_data() {
+                Ok(data) => data,
+                Err(why) => return Err(format!("Failed to get database: {}", why)),
+            };
+
+            for (_id_str, srv_data) in data {
+                if let Some(channel_id_str) = &srv_data.announcement_channel {
+                    let channel_id = match channel_id_str.parse::<u64>() {
+                        Ok(id) => serenity::model::id::ChannelId::new(id),
+                        Err(why) => {
+                            println!("Failed to parse channel id: {}", why);
+                            continue;
+                        }
+                    };
+
+                    if let Err(why) = channel_id.say(&meta.context.http, &message_content).await {
+                        println!("Failed to send message to channel {}: {}", channel_id, why);
+                    }
+                }
+            }
         }
 
         _ => return Err(format!("Command `{}` not recognized", command)),
@@ -387,6 +471,8 @@ async fn main() {
     let token = std::env::var("BOT_TOKEN").expect("insert your bot token dumbass");
 
     let intents = GatewayIntents::GUILD_MESSAGES
+        | GatewayIntents::GUILDS
+        | GatewayIntents::GUILD_MEMBERS
         | GatewayIntents::DIRECT_MESSAGES
         | GatewayIntents::MESSAGE_CONTENT;
 
