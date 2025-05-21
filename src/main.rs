@@ -145,7 +145,7 @@ impl EventHandler for Handler {
         };
 
         // Run the command
-        match invoke_command(
+        if let Err(why) = invoke_command(
             CommandMeta {
                 msg: msg.clone(),
                 context: ctx.clone(),
@@ -155,15 +155,12 @@ impl EventHandler for Handler {
         )
         .await
         {
-            Ok(_) => {}
-            Err(why) => {
-                println!("Failed to invoke command: {why:?}");
-                let _ = msg
-                    .channel_id
-                    .say(&ctx.http, format!("Failed to invoke command: {}", why))
-                    .await;
-            }
-        };
+            println!("Failed to invoke command: {why:?}");
+            let _ = msg
+                .channel_id
+                .say(&ctx.http, format!("Failed to invoke command: {}", why))
+                .await;
+        }
     }
 }
 
@@ -378,10 +375,12 @@ where
                 }
             }
 
-            if let Err(why) = Database::set_announcement_channel(
-                guild_id.to_string(),
-                meta.msg.channel_id.to_string(),
-            ) {
+            let mut to_set = Some(meta.msg.channel_id.to_string());
+            if arguments.next() == Some("disable") {
+                to_set = None
+            }
+
+            if let Err(why) = Database::set_announcement_channel(guild_id.to_string(), to_set) {
                 return Err(why.to_string());
             }
             let _ = meta

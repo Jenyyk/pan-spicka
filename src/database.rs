@@ -53,7 +53,7 @@ impl Database {
 
     pub fn set_announcement_channel(
         server_id: String,
-        channel_id: String,
+        channel_id: Option<String>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         {
             let db = DATABASE.lock();
@@ -64,7 +64,7 @@ impl Database {
             if data.get(&server_id).is_none() {
                 data.insert(server_id.clone(), ServerData::empty());
             }
-            data.get_mut(&server_id).unwrap().announcement_channel = Some(channel_id);
+            data.get_mut(&server_id).unwrap().announcement_channel = channel_id;
         }
         Self::save_to_file("./database.json")?;
         Ok(())
