@@ -16,6 +16,9 @@ pub async fn chat(arg: &str) -> Result<String, Box<dyn std::error::Error>> {
         api_key
     );
 
+    // replace mentions
+    let arg = arg.replace("<@1371940848006074378>", "Pan Špička");
+
     let prompt = json!({
         "system_instruction": {
             "parts": [
