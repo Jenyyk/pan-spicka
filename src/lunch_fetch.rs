@@ -105,15 +105,18 @@ pub fn get_lunch_embed(days_forward: i64) -> Result<Vec<CreateEmbed>, String> {
         if !image_url.is_empty() {
             trimmed_image_url = Some(image_url[1..&image_url.len() - 1].to_string());
         }
-        // Formats the date (gotta love the czech language)
 
+        // Formats the date (gotta love the czech language)
         let date: String = match days_forward {
-            0 => "Dnes".to_string(),
-            1 => "Zítra".to_string(),
-            2 => format!("Za {days_forward} dny").to_string(),
-            3 => format!("Za {days_forward} dny").to_string(),
-            4 => format!("Za {days_forward} dny").to_string(),
-            _ => format!("Za {days_forward} dnů").to_string(),
+            ..=-3 => format!("Před {} dny", days_forward * -1),
+            -2 => String::from("Předevčírem"),
+            -1 => String::from("Včera"),
+            0 => String::from("Dnes"),
+            1 => String::from("Zítra"),
+            2 => format!("Za {days_forward} dny"),
+            3 => format!("Za {days_forward} dny"),
+            4 => format!("Za {days_forward} dny"),
+            _ => format!("Za {days_forward} dnů"),
         };
         let mut rating = offer["averageRating"].to_string();
         if rating == "null" {
