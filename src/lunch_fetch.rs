@@ -108,7 +108,7 @@ pub fn get_lunch_embed(days_forward: i64) -> Result<Vec<CreateEmbed>, String> {
 
         // Formats the date (gotta love the czech language)
         let date: String = match days_forward {
-            ..=-3 => format!("Před {} dny", days_forward * -1),
+            ..=-3 => format!("Před {} dny", -days_forward),
             -2 => String::from("Předevčírem"),
             -1 => String::from("Včera"),
             0 => String::from("Dnes"),
@@ -157,3 +157,9 @@ pub fn help_message() -> (&'static str, &'static str) {
         "Zašle obědy v gypce jídelně v daný den\n`~dny_dopředu` musí být kladné číslo, 0 - dnes, 1 - zítra atd.",
     )
 }
+
+use crate::SlashCommand;
+pub const COMMAND: SlashCommand = SlashCommand {
+    register,
+    help: help_message,
+};

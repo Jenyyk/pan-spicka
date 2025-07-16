@@ -79,3 +79,9 @@ pub fn help_message() -> (&'static str, &'static str) {
         "Konverzuj s panem Špičkou (AI slopem).\n Vše po slovu 'ai' je považováno za zprávu.",
     )
 }
+
+use crate::SlashCommand;
+pub const COMMAND: SlashCommand = SlashCommand {
+    register,
+    help: help_message,
+};

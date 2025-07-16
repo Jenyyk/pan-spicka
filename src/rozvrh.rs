@@ -162,3 +162,9 @@ pub fn help_message() -> (&'static str, &'static str) {
         "Pošle rozvrh dané třídy.\n`~třída` musí mít velké písmeno a být bez tečky, eg. **7B**, **2A**...\n`~čas` musí být buď **0** nebo **+1**",
     )
 }
+
+use crate::SlashCommand;
+pub const COMMAND: SlashCommand = SlashCommand {
+    register,
+    help: help_message,
+};

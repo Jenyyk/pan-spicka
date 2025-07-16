@@ -70,3 +70,9 @@ pub fn help_message() -> (&'static str, &'static str) {
         "Pošle změny dané třídy.\n`~třída` musí mít velké písmeno a být bez tečky, eg. **7B**, **2A**...",
     )
 }
+
+use crate::SlashCommand;
+pub const COMMAND: SlashCommand = SlashCommand {
+    register,
+    help: help_message,
+};

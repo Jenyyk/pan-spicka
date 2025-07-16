@@ -22,6 +22,18 @@ struct CommandMeta {
     context: Context,
 }
 
+pub struct SlashCommand {
+    register: fn() -> CreateCommand,
+    help: fn() -> (&'static str, &'static str),
+}
+
+const SLASH_COMMANDS: [SlashCommand; 4] = [
+    rozvrh::COMMAND,
+    lunch_fetch::COMMAND,
+    chatbot::COMMAND,
+    zmeny::COMMAND,
+];
+
 // Event Handler implementations
 struct Handler;
 #[async_trait]
@@ -29,13 +41,10 @@ impl EventHandler for Handler {
     // Bot start
     async fn ready(&self, ctx: Context, _ready: Ready) {
         // register global commands
-        let global_commands = vec![
-            rozvrh::register(),
-            zmeny::register(),
-            chatbot::register(),
-            lunch_fetch::register(),
-            CreateCommand::new("help").description("zašle pomocné menu"),
-        ];
+        let mut global_commands = Vec::new();
+        for command in SLASH_COMMANDS {
+            global_commands.push((command.register)());
+        }
         match serenity::model::application::Command::set_global_commands(&ctx.http, global_commands)
             .await
         {
@@ -435,7 +444,7 @@ fn get_option_str<'a>(options: &'a [CommandDataOption], name: &str) -> Option<&'
 }
 
 fn help_content() -> CreateEmbed {
-    CreateEmbed::new()
+    let mut embed = CreateEmbed::new()
         .field(
             "Prefixy",
             "Pan Špička přijímá tyto prefixy před zprávami jako příkazy:\n`!ps`, `kys`, `186`",
@@ -446,11 +455,11 @@ fn help_content() -> CreateEmbed {
             "Pan Špička také přijímá discordem podporované příkazy začínající s `/`",
             false,
         )
-        .field("Pan Špička podporuje tyto příkazy:", "", false)
-        .help_field(rozvrh::help_message())
-        .help_field(chatbot::help_message())
-        .help_field(lunch_fetch::help_message())
-        .help_field(zmeny::help_message())
+        .field("Pan Špička podporuje tyto příkazy:", "", false);
+    for command in SLASH_COMMANDS {
+        embed = embed.help_field((command.help)());
+    }
+    embed
 }
 // YES this is ABSOLUTELY NEEDED
 pub trait HelpField {
