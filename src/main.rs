@@ -424,7 +424,11 @@ where
                         }
                     };
 
-                    if let Err(why) = channel_id.say(&meta.context.http, &message_content).await {
+                    let mut announcement_content = String::new();
+                    announcement_content.push_str(&message_content);
+                    announcement_content.push_str("\n-# pro vypnutí těchto oznámení napiště `!ps announcements disable`");
+
+                    if let Err(why) = channel_id.say(&meta.context.http, &announcement_content).await {
                         println!("Failed to send message to channel {}: {}", channel_id, why);
                     }
                 }
