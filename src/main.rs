@@ -11,7 +11,7 @@ use serenity::{
         CreateInteractionResponseMessage, CreateMessage, EditAttachments, EditMessage,
     },
     gateway::ActivityData,
-    model::{application::Interaction, channel::Message, prelude::Ready},
+    model::{application::Interaction, channel::Message, prelude::Ready, guild::Guild},
     prelude::*,
 };
 
@@ -112,6 +112,17 @@ impl EventHandler for Handler {
                 println!("Failed responding to slash command: {why:?}");
             }
         }
+    }
+
+    // we want the bot to choose an announcement channel when it joins a new server
+    async fn guild_create(&self, ctx: Context, guild: Guild, is_new: Option<bool>) {
+        if let Some(system_channel_id) = guild.system_channel_id {
+            // makes sure joined server is new
+            if is_new.is_none() || is_new.is_some_and(|val| val == false) { return; }
+
+            let _ = Database::set_announcement_channel(guild.id.to_string(), Some(system_channel_id.to_string()));
+            let _ = system_channel_id.say(&ctx.http, "Pan Špička vybral tento kanál jako kanál svých šplechtů.\nPro změnu kanálu řekněte `!ps announcements` v kanálu, který chcete vybrat\nPro vypnutí šplechtů řekněte `!ps announcements disable`").await;
+        } else { println!("Joined but no system channel set?"); }
     }
 
     // Message handler
