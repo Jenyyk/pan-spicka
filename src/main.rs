@@ -504,6 +504,6 @@ async fn main() {
         .await
         .expect("failed to create client");
 
-    println!("Launching pan-spicka v0.1.3");
+    println!("Launching pan-spicka v0.1.4");
     let _ = client.start().await;
 }
